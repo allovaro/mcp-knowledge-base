@@ -1,0 +1,49 @@
+{
+  "server": {
+    "port": 3100,
+    "host": "0.0.0.0"
+  },
+  "auth": {
+    "tokens": ["CHANGE-ME-your-secret-token-here"]
+  },
+  "n8n": {
+    "webhook_url": "http://localhost:5678/webhook/kb-search"
+  },
+  "groups": {
+    "industrial": {
+      "description": "Industrial automation, SCADA, PLC, HMI development"
+    },
+    "personal": {
+      "description": "Personal documents, medical records, notes"
+    },
+    "networking": {
+      "description": "Network equipment, routers, configuration guides"
+    }
+  },
+  "collections": [
+    {
+      "id": "svghmi",
+      "group": "industrial",
+      "description": "Search svghmi.pro knowledge base for information about SVG to SVGHMI conversion, widget development, marketplace products, converter features, CustomWebControl, and svghmi.pro business/product documentation.",
+      "qdrant_collection": "svghmi"
+    },
+    {
+      "id": "wincc",
+      "group": "industrial",
+      "description": "Search WinCC Unified documentation for information about HMI development, TIA Portal, PLC programming (S7-1200/1500), SCADA systems, WinCC configuration, scripting, and Siemens industrial automation.",
+      "qdrant_collection": "wincc"
+    },
+    {
+      "id": "tia_openness",
+      "group": "industrial",
+      "description": "Search TIA Portal Openness documentation for information about .NET API for programmatic control of TIA Portal, automating project creation, PLC/HMI configuration via code, Siemens.Engineering DLL libraries, export/import of blocks, screens, and tags.",
+      "qdrant_collection": "tia_openness"
+    },
+    {
+      "id": "plc",
+      "group": "industrial",
+      "description": "Search PLC programming instructions documentation for LAD (Ladder Diagram), SCL (Structured Control Language), and STL (Statement List). Covers instruction sets, timers, counters, math operations, comparisons, bit logic, data type conversions, and PLC programming patterns for S7-1200/1500.",
+      "qdrant_collection": "plc"
+    }
+  ]
+}

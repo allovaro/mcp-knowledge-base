@@ -1,0 +1,5 @@
+node_modules
+.git
+*.zip
+mcp-kb-server.mjs
+README.md

@@ -1,0 +1,21 @@
+services:
+  mcp-knowledge-base:
+    build: .
+    container_name: mcp-knowledge-base
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    environment:
+      - N8N_WEBHOOK_URL=http://n8n:5678/webhook/kb-search
+      - AUTH_TOKENS=your-secret-token-here
+      # - PORT=3100
+      # - HOST=0.0.0.0
+    volumes:
+      - ./config.json:/app/config.json:ro
+    # If n8n is in the same docker network:
+    # networks:
+    #   - your_n8n_network
+
+# networks:
+#   your_n8n_network:
+#     external: true
