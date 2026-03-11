@@ -36,7 +36,10 @@ function buildTools(collections, groups) {
     tools.push({
       name: `search_${col.id}_docs`,
       description: col.description,
-      _category: col.qdrant_collection,
+      _meta: {
+        collection: col.qdrant_collection,
+        category: col.category || null,
+      },
       inputSchema: {
         type: "object",
         properties: {
@@ -55,23 +58,28 @@ function buildTools(collections, groups) {
     });
   }
 
+  // Per-group "search all in group" tools
   const groupCollections = {};
   for (const col of collections) {
     if (!groupCollections[col.group]) groupCollections[col.group] = [];
-    groupCollections[col.group].push(col.qdrant_collection);
+    groupCollections[col.group].push({
+      collection: col.qdrant_collection,
+      category: col.category || null,
+    });
   }
 
   for (const [groupId, groupMeta] of Object.entries(groups)) {
     const cols = groupCollections[groupId];
     if (!cols || cols.length === 0) continue;
 
+    const colNames = [...new Set(cols.map((c) => c.collection))];
     tools.push({
       name: `search_all_${groupId}`,
       description:
-        `Search across ALL collections in the "${groupId}" group: ${cols.join(", ")}. ` +
+        `Search across ALL collections in the "${groupId}" group: ${colNames.join(", ")}. ` +
         groupMeta.description +
         ". Use when the query may span multiple collections within this group.",
-      _category: cols,
+      _meta: { targets: cols },
       inputSchema: {
         type: "object",
         properties: {
@@ -95,25 +103,29 @@ function buildTools(collections, groups) {
 
 const tools = buildTools(config.collections, config.groups);
 
-const toolCategoryMap = {};
+// Build lookup: tool name -> meta
+const toolMetaMap = {};
 for (const t of tools) {
-  toolCategoryMap[t.name] = t._category;
+  toolMetaMap[t.name] = t._meta;
 }
 
 function publicTools() {
-  return tools.map(({ _category, ...rest }) => rest);
+  return tools.map(({ _meta, ...rest }) => rest);
 }
 
 // --- Search logic ---
-async function searchKnowledgeBase(query, category, topK = 5) {
+async function searchKnowledgeBase(query, meta, topK = 5) {
   try {
     const body = { query, top_k: topK };
 
-    if (Array.isArray(category)) {
-      body.category = "multi";
-      body.collections = category;
+    if (meta.targets) {
+      // Group search — multiple collections/categories
+      body.targets = meta.targets;
     } else {
-      body.category = category;
+      body.collection = meta.collection;
+      if (meta.category) {
+        body.category = meta.category;
+      }
     }
 
     const response = await fetch(N8N_WEBHOOK_URL, {
@@ -142,7 +154,7 @@ async function searchKnowledgeBase(query, category, topK = 5) {
     }
 
     if (!results || results.length === 0) {
-      return `No results found for query: "${query}" in category: ${category}`;
+      return `No results found for query: "${query}"`;
     }
 
     const formatted = results.map((result, i) => {
@@ -228,8 +240,8 @@ function createMCPServer() {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
-    const category = toolCategoryMap[name];
-    if (category === undefined) {
+    const meta = toolMetaMap[name];
+    if (!meta) {
       return {
         content: [{ type: "text", text: `Unknown tool: ${name}` }],
         isError: true,
@@ -238,7 +250,7 @@ function createMCPServer() {
 
     const result = await searchKnowledgeBase(
       args.query,
-      category,
+      meta,
       args.top_k || 5
     );
 

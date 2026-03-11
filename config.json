@@ -24,26 +24,36 @@
     {
       "id": "svghmi",
       "group": "industrial",
-      "description": "Search svghmi.pro knowledge base for information about SVG to SVGHMI conversion, widget development, marketplace products, converter features, CustomWebControl, and svghmi.pro business/product documentation.",
-      "qdrant_collection": "svghmi"
+      "qdrant_collection": "knowledge_base",
+      "category": "svghmi",
+      "description": "Search svghmi.pro knowledge base for information about SVG to SVGHMI conversion, widget development, marketplace products, converter features, CustomWebControl, and svghmi.pro business/product documentation."
     },
     {
       "id": "wincc",
       "group": "industrial",
-      "description": "Search WinCC Unified documentation for information about HMI development, TIA Portal, PLC programming (S7-1200/1500), SCADA systems, WinCC configuration, scripting, and Siemens industrial automation.",
-      "qdrant_collection": "wincc"
+      "qdrant_collection": "knowledge_base",
+      "category": "wincc",
+      "description": "Search WinCC Unified documentation for information about HMI development, TIA Portal, PLC programming (S7-1200/1500), SCADA systems, WinCC configuration, scripting, and Siemens industrial automation."
     },
     {
       "id": "tia_openness",
       "group": "industrial",
-      "description": "Search TIA Portal Openness documentation for information about .NET API for programmatic control of TIA Portal, automating project creation, PLC/HMI configuration via code, Siemens.Engineering DLL libraries, export/import of blocks, screens, and tags.",
-      "qdrant_collection": "tia_openness"
+      "qdrant_collection": "knowledge_base",
+      "category": "tia_openness",
+      "description": "Search TIA Portal Openness documentation for information about .NET API for programmatic control of TIA Portal, automating project creation, PLC/HMI configuration via code, Siemens.Engineering DLL libraries, export/import of blocks, screens, and tags."
     },
     {
       "id": "plc",
       "group": "industrial",
-      "description": "Search PLC programming instructions documentation for LAD (Ladder Diagram), SCL (Structured Control Language), and STL (Statement List). Covers instruction sets, timers, counters, math operations, comparisons, bit logic, data type conversions, and PLC programming patterns for S7-1200/1500.",
-      "qdrant_collection": "plc"
+      "qdrant_collection": "knowledge_base",
+      "category": "plc_instructions",
+      "description": "Search PLC programming instructions documentation for LAD (Ladder Diagram), SCL (Structured Control Language), and STL (Statement List). Covers instruction sets, timers, counters, math operations, comparisons, bit logic, data type conversions, and PLC programming patterns for S7-1200/1500."
+    },
+    {
+      "id": "keenetic",
+      "group": "networking",
+      "qdrant_collection": "keenetic_cli",
+      "description": "Search Keenetic router CLI commands, configuration, firewall rules, VLAN, VPN, DHCP, DNS, KeenDNS, port forwarding, and network diagnostics."
     }
   ]
 }
