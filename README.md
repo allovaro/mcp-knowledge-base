@@ -2,6 +2,8 @@
 
 Remote MCP server for semantic search across knowledge base collections via N8N + Qdrant. Runs as a Docker container, accessible from Claude Code CLI, Claude Web, and Claude Desktop.
 
+**Server URL:** `https://mcp.sokolovy-home.crazedns.ru/mcp`
+
 ## Architecture
 
 ```
@@ -11,20 +13,21 @@ Claude Code / Claude Web
         v
   MCP Server (Express + MCP SDK)
         |
-        | HTTP POST
+        | HTTP POST (collection + category)
         v
   N8N Webhook --> Qdrant (vector search)
 ```
 
-- **MCP Server** (`server.mjs`) — Node.js HTTP server, dynamically generates search tools from `config.json`, proxies queries to N8N
-- **N8N** — orchestrates search: receives query, calls Qdrant, returns results
-- **Qdrant** — vector database, stores document embeddings organized by collections
+- **MCP Server** (`server.mjs`) — Node.js HTTP server, dynamically generates search tools from `config.json`, sends `collection` and optional `category` to N8N
+- **N8N** — orchestrates search: receives query with collection name, calls Qdrant, returns results
+- **Qdrant** — vector database, stores document embeddings. Supports both standalone collections (e.g. `keenetic_cli`) and shared collections with category filtering (e.g. `knowledge_base` with categories `wincc`, `svghmi`, etc.)
 
 ## Features
 
 - **Remote access** — Streamable HTTP transport, works through any proxy/CDN
 - **Dynamic collections** — add new collections via `config.json`, no code changes
 - **Collection groups** — isolates unrelated collections (e.g. industrial docs won't mix with personal records)
+- **Mixed Qdrant architecture** — standalone collections + shared collections with `metadata.category` filtering
 - **Auth** — Bearer token via header or query parameter
 - **Docker** — single container, easy to deploy alongside N8N and Qdrant
 
@@ -32,18 +35,21 @@ Claude Code / Claude Web
 
 Collections are organized into groups. Each collection gets its own search tool, and each group gets a `search_all_<group>` tool.
 
+Two types of collections:
+- **Standalone** — separate Qdrant collection, no category (e.g. `keenetic_cli`)
+- **Shared with category** — one Qdrant collection, filtered by `metadata.category` (e.g. `knowledge_base` with `wincc`, `svghmi`, `plc_instructions`, `tia_openness`)
+
 Example config:
 ```
-industrial:  svghmi, wincc, tia_openness, plc
-networking:  keenetic
-personal:    medical
+industrial:  svghmi, wincc, tia_openness, plc  (all in Qdrant "knowledge_base", filtered by category)
+networking:  keenetic                           (standalone Qdrant collection "keenetic_cli")
+personal:    medical_cirill, medical_yuliya     (Qdrant "medical", filtered by category)
 ```
 
 Generated tools:
 - `search_svghmi_docs`, `search_wincc_docs`, `search_tia_openness_docs`, `search_plc_docs`
-- `search_all_industrial` (searches all 4 collections above)
+- `search_all_industrial` (searches all 4 above)
 - `search_keenetic_docs`, `search_all_networking`
-- `search_medical_docs`, `search_all_personal`
 
 Each tool accepts:
 - `query` (string, required) — search query
@@ -79,7 +85,7 @@ openssl rand -hex 32
 
 ```bash
 claude mcp add -t http -s user \
-  knowledge-base https://your-server.example.com/mcp \
+  knowledge-base https://mcp.sokolovy-home.crazedns.ru/mcp \
   -H "Authorization: Bearer <your-token>"
 ```
 
@@ -87,7 +93,7 @@ claude mcp add -t http -s user \
 
 Add custom connector with URL:
 ```
-https://your-server.example.com/mcp?token=<your-token>
+https://mcp.sokolovy-home.crazedns.ru/mcp?token=<your-token>
 ```
 
 ## Configuration
@@ -107,12 +113,26 @@ https://your-server.example.com/mcp?token=<your-token>
     {
       "id": "wincc",
       "group": "industrial",
-      "description": "Search WinCC Unified documentation...",
-      "qdrant_collection": "wincc"
+      "qdrant_collection": "knowledge_base",
+      "category": "wincc",
+      "description": "Search WinCC Unified documentation..."
+    },
+    {
+      "id": "keenetic",
+      "group": "networking",
+      "qdrant_collection": "keenetic_cli",
+      "description": "Search Keenetic router CLI commands..."
     }
   ]
 }
 ```
+
+Collection fields:
+- `id` — unique identifier, used to generate tool name (`search_<id>_docs`)
+- `group` — which group this collection belongs to
+- `qdrant_collection` — actual Qdrant collection name
+- `category` (optional) — filter by `metadata.category` within shared Qdrant collection
+- `description` — description shown to Claude to decide when to use this tool
 
 ### Environment variables
 
@@ -126,35 +146,66 @@ https://your-server.example.com/mcp?token=<your-token>
 
 ### Adding a new collection
 
-1. Create the Qdrant collection and load documents via N8N
-2. Add entry to `config.json`:
+**Standalone collection** (separate Qdrant collection, no category):
+
+1. In N8N, load documents into Qdrant with collection name `vpn` (no metadata category needed)
+2. Add to `config.json`:
    ```json
    {
-     "id": "my_docs",
-     "group": "my_group",
-     "description": "Description for Claude to know when to use this tool",
-     "qdrant_collection": "my_docs"
+     "id": "vpn",
+     "group": "networking",
+     "qdrant_collection": "vpn",
+     "description": "VPN configuration, WireGuard, OpenVPN, proxy setup"
    }
    ```
-3. Restart the container — new tools appear automatically
+3. Restart container
+
+**Shared collection with category** (e.g. adding a person to existing `medical` collection):
+
+1. In N8N, load documents into Qdrant collection `medical` with metadata `category: cirill`
+2. Add to `config.json`:
+   ```json
+   {
+     "id": "medical_cirill",
+     "group": "personal",
+     "qdrant_collection": "medical",
+     "category": "cirill",
+     "description": "Medical records and test results for Cirill"
+   }
+   ```
+3. Restart container
 
 ## N8N Webhook Protocol
 
 **Request** (POST JSON):
+
+Single collection search:
+```json
+{
+  "query": "show interface",
+  "collection": "keenetic_cli",
+  "top_k": 5
+}
+```
+
+Single collection with category filter:
 ```json
 {
   "query": "how to create a widget",
+  "collection": "knowledge_base",
   "category": "svghmi",
   "top_k": 5
 }
 ```
 
-For group searches:
+Group search (multiple targets):
 ```json
 {
   "query": "timer instruction",
-  "category": "multi",
-  "collections": ["wincc", "plc"],
+  "targets": [
+    { "collection": "knowledge_base", "category": "wincc" },
+    { "collection": "knowledge_base", "category": "plc_instructions" }
+  ],
   "top_k": 5
 }
 ```
@@ -170,6 +221,32 @@ For group searches:
 // Error
 { "success": false, "error": "error description" }
 ```
+
+### N8N Workflow Setup
+
+The webhook workflow consists of 3 nodes: **Webhook** → **Code in JavaScript** → **Qdrant Vector Store**
+
+**Code node** (processes incoming request):
+```javascript
+const body = $input.first().json.body;
+
+const output = {
+  query: body.query,
+  collection: body.collection || 'knowledge_base',
+  top_k: body.top_k || 4,
+  filter: body.category
+    ? { must: [{ key: "metadata.category", match: { value: body.category } }] }
+    : {}
+};
+
+return [{ json: output }];
+```
+
+**Qdrant Vector Store** node settings (all with `fx` expression mode enabled):
+- **Collection**: `{{ $json.collection }}`
+- **Prompt**: `{{ $json.query }}`
+- **Limit**: `{{ $json.top_k }}`
+- **Search Filter**: `{{ JSON.stringify($json.filter) }}`
 
 ## Deploy on OpenMediaVault (OMV)
 
@@ -213,7 +290,7 @@ OMV with omv-extras Docker/Compose plugin.
 
 5. In **OMV Web UI** → **Services** → **Compose** → select the stack → **Build**, then **Up**
 
-6. Verify: open `http://OMV-IP:3100/health` in browser
+6. Verify: open `https://mcp.sokolovy-home.crazedns.ru/health` in browser
 
 ### Updating
 
@@ -222,7 +299,7 @@ OMV with omv-extras Docker/Compose plugin.
 
 ### External access
 
-If using Keenetic KeenDNS — set domain to **direct connection** mode (not "through cloud"), as cloud mode may buffer/break HTTP streaming. Alternatively, use standard port forwarding.
+Uses Keenetic KeenDNS with direct connection mode for domain `mcp.sokolovy-home.crazedns.ru`.
 
 ## Endpoints
 
