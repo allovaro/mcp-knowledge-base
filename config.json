@@ -50,6 +50,13 @@
       "description": "Search PLC programming instructions documentation for LAD (Ladder Diagram), SCL (Structured Control Language), and STL (Statement List). Covers instruction sets, timers, counters, math operations, comparisons, bit logic, data type conversions, and PLC programming patterns for S7-1200/1500."
     },
     {
+      "id": "plcsim_api",
+      "group": "industrial",
+      "qdrant_collection": "knowledge_base",
+      "category": "plcsim_api",
+      "description": "Search PLCSIM Advanced API documentation for the .NET API to control PLCSIM Advanced instances programmatically: Siemens.Simatic.Simulation.Runtime namespace, IInstance interface, registering/starting/stopping virtual PLCs, reading/writing tags, communication interfaces (TCP/IP, PLCSIM, Softbus), and automating S7-1500 simulation from C#/.NET."
+    },
+    {
       "id": "keenetic",
       "group": "networking",
       "qdrant_collection": "keenetic_cli",
