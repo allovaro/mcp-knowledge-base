@@ -251,7 +251,7 @@ function createMCPServer() {
     const result = await searchKnowledgeBase(
       args.query,
       meta,
-      args.top_k || 5
+      Number(args.top_k) || 5
     );
 
     return {
